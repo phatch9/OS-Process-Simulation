@@ -30,16 +30,16 @@ a single integer variable. Thus the state of a simulated process at any instant 
 of the value of its integer variable and the value of its program counter. A simulated
 process program consists of a sequence of instructions. There are seven types of
 instructions as follows:
-- 1. S n: Set the value of the integer variable to n, where n is an integer.
-- 2. A n: Add n to the value of the integer variable, where n is an integer.
-- 3. D n: Subtract n from the value of the integer variable, where n is an integer.
-- 4. B: Block this simulated process.
-- 5. E: Terminate this simulated process.
-- 6. F n: Create a new simulated process. The new (simulated) process is an exact copy of
+- S n: Set the value of the integer variable to n, where n is an integer.
+- A n: Add n to the value of the integer variable, where n is an integer.
+- D n: Subtract n from the value of the integer variable, where n is an integer.
+- B: Block this simulated process.
+- E: Terminate this simulated process.
+- F n: Create a new simulated process. The new (simulated) process is an exact copy of
 the parent (simulated) process. The new (simulated) process executes from the instruction
 immediately after this (F) instruction, while the parent (simulated) process continues its
 execution N instructions after the next instruction.
-- 7. R filename: Replace the program of the simulated process with the program in the file
+- R filename: Replace the program of the simulated process with the program in the file
 filename, and set the program counter to the first instruction of this new program
 
 
