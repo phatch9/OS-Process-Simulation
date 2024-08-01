@@ -42,4 +42,4 @@ execution N instructions after the next instruction.
 - R filename: Replace the program of the simulated process with the program in the file
 filename, and set the program counter to the first instruction of this new program
 
-
+                  **© Copyright 2023 Pearson Education, Inc. All Rights Reserved.**
