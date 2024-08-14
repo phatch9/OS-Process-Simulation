@@ -45,3 +45,24 @@ public:
   unsigned int startTime;
   unsigned int timeUsed;
 };
+
+PcbEntry pcbEntry[10];
+unsigned int timestamp = 0;
+Cpu cpu;
+int runningState = -1;
+deque<int> readyState;
+deque<int> blockedState;
+double cumulativeTimeDiff = 0;
+int numTerminatedProcesses = 0;
+
+string trim(const string &s) {
+  auto start = s.begin();
+  while (start != s.end() && isspace(*start)) {
+    start++;
+  }
+  auto end = s.end();
+  do {
+    end--;
+  } while (distance(start, end) > 0 && isspace(*end));
+  return string(start, end + 1);
+}
