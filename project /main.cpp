@@ -55,14 +55,74 @@ deque<int> blockedState;
 double cumulativeTimeDiff = 0;
 int numTerminatedProcesses = 0;
 
-string trim(const string &s) {
-  auto start = s.begin();
-  while (start != s.end() && isspace(*start)) {
+string trim(const string &s) 
+{
+    auto start = s.begin();
+    while (start != s.end() && isspace(*start)) {
     start++;
-  }
-  auto end = s.end();
-  do {
-    end--;
-  } while (distance(start, end) > 0 && isspace(*end));
-  return string(start, end + 1);
+    }
+    auto end = s.end();
+    do { 
+        end--;
+    } while (distance(start, end) > 0 && isspace(*end));
+    return string(start, end + 1);
+}
+bool createProgram (const string &filename,  vector<Instruction> &program) 
+{
+    ifstream file;
+    int lineNum = 0;
+    string filename_proper = filename + ".txt";
+    file.open(filename_proper);
+    cout << filename << endl;
+
+    if (!file.is_open()) {
+        cout << "error occurs when opening" << filename <<endl;
+        return false;
+    }
+    while (file.good()) {
+        string line;
+        getline(file, line);
+        line = trim(line);
+        if (line.size() > 0) {
+        Instruction instruction;
+        instruction.operation = toupper(line[0]);
+        instruction.stringArg = trim(line.erase(0, 1));
+        stringstream argStream(instruction.stringArg);
+        switch (instruction.operation) {
+            // Instructions SADF all take integer input
+            // Integer argument
+            case 'S': 
+            case 'A': 
+            case 'D': 
+            case 'F':
+            if (!(argStream >> instruction.intArg)) {
+            cout << filename << ":" << lineNum << " - Invalid integer argument " << instruction.stringArg << " for " << instruction.operation
+                << " operation" << endl;
+                file.close();
+            return false;
+            }
+            break;
+                case 'B': // No argument.
+                case 'E': // No argument.
+            break;
+            // String input
+                case 'R': // String argument.
+            if (instruction.stringArg.size() == 0) {
+            cout << filename << ":" << lineNum << " - Missing string argument"
+                << endl;
+            file.close();
+            return false;
+            }
+            break;
+        default:
+            cout << filename << ":" << lineNum << " - Invalid operation, "  << instruction.operation << endl;
+            file.close();
+            return false;
+            }
+            program.push_back(instruction);
+        }
+        lineNum++;
+    }
+    file.close();
+    return true;
 }
