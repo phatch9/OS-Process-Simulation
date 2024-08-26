@@ -126,3 +126,128 @@ bool createProgram (const string &filename,  vector<Instruction> &program)
     file.close();
     return true;
 }
+void printCpuState(const string &operation) {
+    cout << "Operation: " << operation << endl;
+    cout << "CPU Value: " << cpu.value << endl;
+    cout << "Program Counter: " << cpu.programCounter << endl;
+    cout << "----------------------------" << endl;
+}
+
+// Implements the S operation.
+void set(int value) {
+    PcbEntry &runningProcess = pcbEntry[runningState];
+    runningProcess.value = value;
+    cpu.value = value;
+    printCpuState("Set");
+    }
+
+// Implements the A operation.
+void add(int value) {
+    PcbEntry &runningProcess = pcbEntry[runningState];
+    runningProcess.value += value;
+    cpu.value += value;
+    printCpuState("Add");
+}
+
+// Implements the D operation.
+void decrement(int value) {
+    PcbEntry &runningProcess = pcbEntry[runningState];
+    runningProcess.value -= value;
+    cpu.value -= value;
+    printCpuState("Decrement");
+}
+
+// Performs scheduling.
+void schedule() {
+  if (runningState != -1) {
+    return;
+  }
+  if (!readyState.empty()) {
+    runningState = readyState.front();
+    readyState.pop_front();
+    PcbEntry &pcb = pcbEntry[runningState];
+    pcb.state = STATE_RUNNING;
+    cpu.pProgram = &pcb.program;
+    cpu.programCounter = pcb.programCounter;
+    cpu.value = pcb.value;
+    cpu.timeSliceUsed = 0;
+  }
+
+  printCpuState("Schedule");
+}
+
+
+// Implements the E operation.
+void end() {
+  if (runningState == -1) {
+    cout<<"Failed to end process"<<endl;
+    return;
+  }
+  PcbEntry &pcb = pcbEntry[runningState];
+  cumulativeTimeDiff += timestamp + 1 - pcb.startTime;
+  numTerminatedProcesses++;
+  runningState = -1;
+  schedule();
+
+  printCpuState("End");
+}
+
+// Implements the B operation.
+void block() {
+  if (runningState == -1)
+    return;
+  end();
+  blockedState.push_back(runningState);
+  PcbEntry &pcb = pcbEntry[runningState];
+  pcb.state = STATE_BLOCKED;
+  pcb.programCounter = cpu.programCounter;
+  pcb.value = cpu.value;
+  runningState = -1;
+  schedule();
+
+  printCpuState("Block");
+}
+
+// Implements the F operation.
+void fork(int value) {
+  int freeIndex = -1;
+  for (int i = 0; i < 10; i++) {
+    if (pcbEntry[i].processId == -1) {
+        freeIndex = i;
+        break;
+    }
+  }
+  if (freeIndex == -1) {
+    cout << "No free PCB entry available" << endl;
+    return;
+  }
+    PcbEntry &parentPCB = pcbEntry[runningState];
+    pcbEntry[freeIndex].processId = freeIndex;
+    pcbEntry[freeIndex].parentProcessId = parentPCB.processId;
+    pcbEntry[freeIndex].program = parentPCB.program;
+    pcbEntry[freeIndex].programCounter =
+    cpu.programCounter + 1; // Start execution after the 'F' instruction
+    pcbEntry[freeIndex].value = parentPCB.value; // Start with the same value as parent
+    pcbEntry[freeIndex].priority = parentPCB.priority; // Same priority as parent
+    pcbEntry[freeIndex].state = STATE_READY;
+    pcbEntry[freeIndex].startTime = timestamp;
+    pcbEntry[freeIndex].timeUsed = 0;
+    readyState.push_back(freeIndex);
+
+    printCpuState("Fork");
+
+    cpu.programCounter += value; // Move program counter to skip n instructions after the 'F' instruction
+
+}
+
+// Implements the R operation.
+void replace(string &filename) {
+    cpu.pProgram->clear();
+    if (!createProgram(filename, *cpu.pProgram)) {
+        // If loading the program fails, handle it accordingly
+        cerr << "Failed to replace program from file: " << filename << endl;
+        return;
+    }
+    cpu.programCounter = 0; // Reset the program counter
+    cout << "Program replaced with the contents of file: " << filename << endl;
+    }
