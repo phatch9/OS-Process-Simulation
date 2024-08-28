@@ -251,3 +251,120 @@ void replace(string &filename) {
     cpu.programCounter = 0; // Reset the program counter
     cout << "Program replaced with the contents of file: " << filename << endl;
     }
+    
+// Unblocks a process.
+void unblock() {
+  if (!blockedState.empty()) {
+    int processId = blockedState.front();
+    blockedState.pop_front();
+    readyState.push_back(processId);
+    pcbEntry[processId].state = STATE_READY;
+  }
+  schedule();
+}
+
+void quantum() {
+  if (runningState == -1) {
+    schedule();
+    return;
+  }
+  if (cpu.programCounter < cpu.pProgram->size()) {
+    Instruction instruction = (*cpu.pProgram)[cpu.programCounter];
+    switch (instruction.operation) {
+    case 'S':
+      set(instruction.intArg);
+      cpu.programCounter++;
+      break;
+    case 'A':
+      add(instruction.intArg);
+      cpu.programCounter++;
+      break;
+    case 'D':
+      decrement(instruction.intArg);
+      cpu.programCounter++;
+      break;
+    case 'B':
+      block();
+      break;
+    case 'E':
+      end();
+      cpu.programCounter++;
+      break;
+    case 'F':
+      fork(instruction.intArg);
+      cpu.programCounter++;
+      break;
+    case 'R':
+      cout<< "Replacing..."<<endl;
+      replace(instruction.stringArg);
+      break;
+    }
+
+  } else {
+    end();
+  }
+}
+
+void printSystemState() {
+    cout << "************************************************************"
+       << endl;
+    cout << "The current system state is as follows:" << endl;
+    cout << "************************************************************"
+       << endl;
+
+    cout << "CURRENT TIME: " << timestamp << endl;
+
+    cout << "RUNNING PROCESS:" << endl;
+    if (runningState != -1) {
+        PcbEntry &runningProcess = pcbEntry[runningState];
+        cout << "pid: " << runningProcess.processId
+            << ", ppid: " << runningProcess.parentProcessId
+            << ", priority: " << runningProcess.priority
+            << ", value: " << runningProcess.value
+            << ", start time: " << runningProcess.startTime
+            << ", CPU time used so far: " << timestamp - runningProcess.startTime << endl;
+
+    } else {
+    cout << "No process is currently running." << endl;
+    }
+
+    cout << "BLOCKED PROCESSES:" << endl;
+    if (blockedState.empty()) {
+    cout << "No blocked processes." << endl;
+        } else {
+        for (int pid : blockedState) {
+            PcbEntry &blockedProcess = pcbEntry[pid];
+            cout << "pid: " << blockedProcess.processId
+                << ", ppid: " << blockedProcess.parentProcessId
+                << ", priority: " << blockedProcess.priority
+                << ", value: " << blockedProcess.value
+                << ", start time: " << blockedProcess.startTime
+                << ", CPU time used so far: " << blockedProcess.timeUsed << endl;
+        }
+    }
+
+    cout << "PROCESSES READY TO EXECUTE:" << endl;
+    if (readyState.empty()) {
+    cout << "No processes ready to execute." << endl;
+    } else {
+    map<int, vector<int>> priorityMap;
+    for (int pid : readyState) {
+        priorityMap[pcbEntry[pid].priority].push_back(pid);
+        }
+    for (auto &entry : priorityMap) {
+    cout << "Queue of processes:" << endl;
+    for (int pid : entry.second) {
+        PcbEntry &readyProcess = pcbEntry[pid];
+        cout << "pid: " << readyProcess.processId
+             << ", ppid: " << readyProcess.parentProcessId
+             << ", priority: " << readyProcess.priority
+             << ", value: " << readyProcess.value
+             << ", start time: " << readyProcess.startTime
+             << ", CPU time used so far: " << readyProcess.timeUsed << endl;
+        }
+    }
+}
+
+    cout << "-------------------------------------------------"
+        << endl;
+}
