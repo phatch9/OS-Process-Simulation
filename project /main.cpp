@@ -251,7 +251,7 @@ void replace(string &filename) {
     cpu.programCounter = 0; // Reset the program counter
     cout << "Program replaced with the contents of file: " << filename << endl;
     }
-    
+
 // Unblocks a process.
 void unblock() {
   if (!blockedState.empty()) {
@@ -367,4 +367,127 @@ void printSystemState() {
 
     cout << "-------------------------------------------------"
         << endl;
+}
+
+void print() { printSystemState(); }
+
+int runProcessManager(int fileDescriptor){
+  vector<Instruction> program;
+  for (int i = 0; i < 10; i++) {
+    pcbEntry[i].processId = -1;
+  }
+  // Attempts to create the initial process
+  if (!createProgram("file", program)) {
+    return EXIT_FAILURE;
+  }
+
+  pcbEntry[0].processId = 0;
+  pcbEntry[0].parentProcessId = 0;
+  pcbEntry[0].program = program;
+  pcbEntry[0].programCounter = 0;
+  pcbEntry[0].value = 0;
+  pcbEntry[0].priority = 0;
+  pcbEntry[0].state = STATE_READY;
+  pcbEntry[0].startTime = 0;
+  pcbEntry[0].timeUsed = 0;
+  readyState.push_back(0);
+
+  runningState = 0;
+
+  cpu.pProgram = &(pcbEntry[0].program);
+  cpu.programCounter = pcbEntry[0].programCounter;
+  cpu.value = pcbEntry[0].value; 
+
+  timestamp = 0;
+  //double avgTurnaroundTime = 0;
+
+  // Loop until a 'T' is read, then terminate.
+  char ch;
+
+  do {
+    if(read(fileDescriptor, &ch, sizeof(ch)) != sizeof(ch)){
+      break;
+    }
+    // Print the input character
+    cout << "Received: " << ch << endl;
+
+    switch (ch) {
+      case 'Q':
+        quantum();
+        timestamp++;
+        break;
+      case 'U':
+        unblock();
+        break;
+      case 'P':
+        print();
+        break;
+      case 'T':
+          cout << "Average Turnaround Time: "
+               << cumulativeTimeDiff / numTerminatedProcesses << endl;
+          exit(0);
+        break;
+
+      default:
+        cout << "Invalid command. Valid commands are Q, U, P, or T." << endl;
+      }
+
+  } while(ch != 'T');
+  return EXIT_SUCCESS;
+}
+
+int main() {
+  const int READ_END = 0;
+  const int WRITE_END = 1;
+
+  //~~~~~~~~~~~~~~~~
+  char ch;
+  int result;
+  //~~~~~~~~~~~~~~~~~
+
+  int pipeDescriptors[2];
+  if (pipe(pipeDescriptors) == -1) {
+    perror("pipe");
+    exit(EXIT_FAILURE);
+  }
+  pid_t childPid = fork();
+  if (childPid == -1) {
+    perror("fork");
+    exit(EXIT_FAILURE);
+  }
+
+  if (childPid == 0) { // child process aka process manager
+    close(pipeDescriptors[WRITE_END]);
+
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    result = runProcessManager(pipeDescriptors[READ_END]);
+    close(pipeDescriptors[READ_END]);
+
+    _exit(result);
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  } else { // parent process aka commander process
+    close(pipeDescriptors[READ_END]);
+
+
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    do { //loop until T
+      cout << "Enter Q, P, U, or T" << endl;
+      cout << "$";
+      cin >> ch;
+      char input = toupper(ch);
+
+      if(write(pipeDescriptors[WRITE_END], &input, sizeof(input)) != sizeof(input)) {
+        break; //assume child exited
+      }
+
+      usleep(400);
+
+    } while (toupper(ch) != 'T');
+   (void) write(pipeDescriptors[WRITE_END], &ch, sizeof(ch));
+
+    close(pipeDescriptors[WRITE_END]);
+    wait(&result);
+
+  }
+  return 0;
 }
